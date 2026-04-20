@@ -1,0 +1,65 @@
+clc; 
+clear all;
+close all;
+%% PART 1: BASIC PWM GENERATION
+% 1.1 Define basic parameters
+V_dc = 100;         % DC input voltage [V]
+f_grid = 50;        % Grid frequency [Hz]
+f_sw = 5000;        % Switching frequency [Hz]
+M = 0.9;            % Modulation index
+% 1.2 Time vector (show 2 cycles of grid frequency)
+T_grid = 1/f_grid;
+t = 0:1/(20*f_sw):2*T_grid;  % 20 samples per switching period
+% 1.3 Generate signals
+% Reference sine wave (what we want to produce)
+V_ref = M * sin(2*pi*f_grid*t);
+% Triangular carrier wave (what controls the switching)
+V_carrier = sawtooth(2*pi*f_sw*t + pi/2, 0.5);
+% 1.4 Generate PWM signal
+% Simple rule: When sine > triangle, output is HIGH (+V_dc/2)
+%              When sine < triangle, output is LOW (-V_dc/2)
+pwm_output = zeros(size(t));
+pwm_output(V_ref > V_carrier) = V_dc/2;
+pwm_output(V_ref <= V_carrier) = -V_dc/2;
+%% PART 2: PLOT RESULTS
+% Figure 1: PWM Generation
+figure('Position', [100, 100, 800, 600]);
+subplot(3,1,1);
+plot(t*1000, V_ref, 'b-', 'LineWidth', 2);
+hold on;
+plot(t*1000, V_carrier, 'r-', 'LineWidth', 1);
+xlabel('Time (ms)');
+ylabel('Voltage');
+title('PWM Generation: Reference vs Carrier');
+legend('Reference Sine (50 Hz)', 'Carrier Triangle (5 kHz)');
+grid on;
+xlim([0, 40]);  % Show 40ms (2 cycles at 50Hz)
+% Highlight one switching period
+T_sw = 1/f_sw;
+idx = find(t < T_sw, 1, 'last');
+plot([0, T_sw*1000], [0, 0], 'k--');
+text(T_sw*500, -1.2, 'One Switching Period', 'HorizontalAlignment', 'center');
+subplot(3,1,2);
+stairs(t*1000, pwm_output, 'g-', 'LineWidth', 1.5);
+xlabel('Time (ms)');
+ylabel('Voltage (V)');
+title('PWM Output Voltage');
+grid on;
+xlim([0, 40]);
+ylim([-60, 60]);
+% Zoom in to see switching details
+subplot(3,1,3);
+zoom_start = 10;  % Start at 10ms
+zoom_duration = 2; % Show 2ms
+zoom_end = zoom_start + zoom_duration;
+t_zoom = t*1000;
+idx_zoom = (t_zoom >= zoom_start) & (t_zoom <= zoom_end);
+plot(t_zoom(idx_zoom), V_ref(idx_zoom), 'b-', 'LineWidth', 2);
+hold on;
+plot(t_zoom(idx_zoom), V_carrier(idx_zoom), 'r-', 'LineWidth', 1);
+stairs(t_zoom(idx_zoom), pwm_output(idx_zoom), 'g-', 'LineWidth', 1.5);
+xlabel('Time (ms)');
+ylabel('Voltage');
+title(sprintf('Zoom: %d-%d ms', zoom_start, zoom_end));
+legend('Reference', 'Carrier', 'PWM Output');
+grid on;
